@@ -16,7 +16,10 @@ shuffleArray(stock);
 shuffleArray(stock);
 shuffleArray(stock);
 
-const tableau = [[], [], [], [], [], [], []];
+function dragstart_handler(ev) {
+  ev.originalEvent.target.setAttribute("id", "beingdragged");
+  ev.originalEvent.dataTransfer.dropEffect = "move";
+}
 
 const createCard = (text, shown) =>
   $("<div>")
@@ -24,6 +27,7 @@ const createCard = (text, shown) =>
     .addClass(shown ? "face-up" : "face-down")
     .addClass(text.slice(-1)) // extract family
     .attr("draggable", true)
+    .on("dragstart", dragstart_handler)
     .css({
       position: "absolute",
       textAlign: "right",
@@ -31,70 +35,40 @@ const createCard = (text, shown) =>
     .text(text);
 
 const addToPile = (pile, cardText, shown) => {
-  tableau[pile].push([cardText, shown]);
-  const card = createCard(cardText, shown)
-  card.css({marginTop: 20 * tableau[pile].length})
-  $($(`div.tableau > div.pile[index=${pile}]`)).append(card)
+  pile.append(createCard(cardText, shown).css({ marginTop: 20 * pile.find(".card").length }));
 };
 
-const moveBetweenPiles = (pileFrom, pileTo, cardText) => {
-  tableau[pileFrom].pop(); // TODO assuming the last element for now
-  tableau[pileTo].push([cardText, true]);
-  const card = createCard(cardText, true)
-  card.css({marginTop: 20 * tableau[pileTo].length})
-  $($(`div.tableau > div.pile[index=${pileTo}]`)).append(card)
+const moveBetweenPiles = (pileTo, card) => {
+  const pile = $(pileTo);
+  pile.append(card.css({ marginTop: 20 * pile.find(".card").length }));
 };
 
-for (let startingColumn = 0; startingColumn <= 6; startingColumn++) {
-  for (let column = startingColumn; column <= 6; column++) {
+const piles = [];
+
+for (let i = 0; i <= 6; i++) {
+  piles[i] = $(`.tableau > .pile[index=${i}]`)
+    .attr("ondrop", "drop_handler(event)")
+    .attr("ondragover", "dragover_handler(event)");
+}
+
+for (let line = 0; line <= 6; line++) {
+  for (let column = line; column <= 6; column++) {
     const card = stock.pop();
-    const shown = startingColumn == column;
-    addToPile(column, card, shown);
+    const shown = line == column;
+    addToPile(piles[column], card, shown);
   }
 }
 
 console.log(stock);
-console.log(tableau);
-
-function dragstart_handler(ev) {
-  console.log("dragstart_handler", ev);
-  // console.log("typeof ev.target", typeof ev.target)
-  ev.target.setAttribute("id", "beingdragged");
-  // ev.dataTransfer.setData("application/x-moz-node", ev.target)
-  // ev.dataTransfer.setData("text/plain", "coucou")
-  ev.dataTransfer.dropEffect = "move";
-}
-
-document.querySelectorAll(".tableau .card, .talon").forEach((card) => {
-  card.addEventListener("dragstart", dragstart_handler);
-});
 
 function dragover_handler(ev) {
   ev.preventDefault();
-  // ev.dataTransfer.setData("text/plain", "coucou")
-  // console.log("dragover_handler", ev)
-  // console.log("dragover");
-  // ev.dataTransfer.dropEffect = "move";
 }
+
 function drop_handler(ev) {
   ev.preventDefault();
-  // const data = ev.dataTransfer.getData("application/x-moz-node");
-  console.log(ev.target);
-
-  // ev.target.parentNode.appendChild(document.querySelector("#beingdragged"));
-  const pileFrom = document.querySelector("#beingdragged").parentNode.getAttribute("index");
-  const pileTo = ev.target.parentNode.getAttribute("index");
-  moveBetweenPiles(pileFrom, pileTo, document.querySelector("#beingdragged").textContent);
-  document.querySelector("#beingdragged").remove();
-
-  // Get the id of the target and add the moved element to the target's DOM
-  // const data = ev.dataTransfer.getData("text/plain");
-  // ev.target.appendChild(document.getElementById(data));
-  console.log("drop_handler", ev);
+  const card = $("#beingdragged").removeAttr("id");
+  moveBetweenPiles(ev.target.parentNode, card);
 }
-
-document.querySelectorAll(".pile").forEach((pile) => {
-  $(pile).attr("ondrop", "drop_handler(event)").attr("ondragover", "dragover_handler(event)");
-});
 
 const talon = [];
