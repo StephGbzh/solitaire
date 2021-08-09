@@ -24,20 +24,29 @@ body {
   background-color: var(--bg-color);
 }
 
+.stock,
+.talon,
+.foundation,
 .card {
   border: var(--border-width) solid black;
   border-radius: 5px;
   height: var(--card-height);
   width: var(--card-width);
   margin: var(--card-margin);
+}
+
+.card {
   text-align: right;
 }
 
-.talon .card {
+.talon .card,
+.foundation > .card {
   display: none;
+  margin: calc(-1 * var(--border-width));
 }
 
-.talon .card:last-child {
+.talon .card:last-child,
+.foundation > .card:last-child {
   display: block;
 }
 
@@ -46,7 +55,11 @@ body {
   margin-left: calc(var(--card-width) + 2 * var(--border-width) + 2 * var(--card-margin));
 }
 
-.foundations > .card > span {
+.foundation > span {
+  display: none;
+}
+
+.foundation > span:last-child {
   font-size: 100;
   display: block;
   padding-top: 15px;
@@ -61,13 +74,11 @@ body {
   margin: var(--card-margin);
 }
 
-.pile .card,
-.talon .card {
+.pile .card {
   margin: 0;
 }
 
-.tableau .card > .card,
-.talon .card {
+.tableau .card > .card {
   margin: calc(-1 * var(--border-width));
 }
 
