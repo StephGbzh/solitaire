@@ -37,10 +37,11 @@ const drop_handler = (ev) => {
   const foundation = evTarget.closest(".foundation");
   if (from == "talon") {
     talon.pop();
+    makeDropReceptor(droppedCard);
   } else if (from == "pile") {
     // forbid dropping several cards on foundations
     if (foundation.length > 0 && droppedCard.find(".card").length > 0) {
-      return
+      return;
     }
 
     const droppedCardOldParent = droppedCard.parent();
@@ -56,7 +57,7 @@ const drop_handler = (ev) => {
   } else if (from == "foundation") {
     // nothing specific
   }
-  
+
   if (foundation.length > 0) {
     foundation.append(droppedCard);
     droppedCard.attr("from", "foundation");
