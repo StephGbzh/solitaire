@@ -1,5 +1,6 @@
 const family = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "V", "D", "R"];
 let stock = [];
+let talon = [];
 
 ["♥", "♦", "♣", "♠"].forEach((color) => {
   family.forEach((rank) => {
@@ -20,10 +21,60 @@ const dragstart_handler = (ev) => {
   ev.originalEvent.dataTransfer.dropEffect = "move";
 };
 
-const createCard = (text, shown) => {
+const dragover_handler = (ev) => ev.preventDefault();
+
+const drop_handler = (ev) => {
+  ev.preventDefault();
+  const evTarget = $(ev.target);
+  // forbid drop on itself
+  if (evTarget.attr("id") == "beingdragged") {
+    evTarget.removeAttr("id");
+    return;
+  }
+  const droppedCard = $("#beingdragged");
+  droppedCard.removeAttr("id");
+  const from = droppedCard.attr("from");
+  const foundation = evTarget.closest(".foundation");
+  if (from == "talon") {
+    talon.pop();
+  } else if (from == "pile") {
+    // forbid dropping several cards on foundations
+    if (foundation.length > 0 && droppedCard.find(".card").length > 0) {
+      return
+    }
+
+    const droppedCardOldParent = droppedCard.parent();
+    makeDropReceptor(droppedCardOldParent);
+    // reveal next card on old pile
+    if (droppedCardOldParent.hasClass("card") && droppedCardOldParent.hasClass("face-down")) {
+      droppedCardOldParent
+        .removeClass("face-down")
+        .addClass("face-up")
+        .attr("draggable", true)
+        .on("dragstart", dragstart_handler);
+    }
+  } else if (from == "foundation") {
+    // nothing specific
+  }
+  
+  if (foundation.length > 0) {
+    foundation.append(droppedCard);
+    droppedCard.attr("from", "foundation");
+    return;
+  }
+  const pileOrPileCard = evTarget.closest(".card, .pile");
+  if (pileOrPileCard.length > 0) {
+    unmakeDropReceptor(pileOrPileCard);
+    pileOrPileCard.append(droppedCard);
+    droppedCard.attr("from", "pile");
+  }
+};
+
+const createCard = (text, shown, from) => {
   const card = $("<div>")
     .addClass("card")
     .addClass(text.slice(-1)) // extract family
+    .attr("from", from)
     .append($("<div>").addClass("t").text(text));
 
   if (shown) {
@@ -35,43 +86,33 @@ const createCard = (text, shown) => {
   return card;
 };
 
-let talon = [];
+const makeDropReceptor = (element) => {
+  $(element).attr("ondrop", "drop_handler(event)").attr("ondragover", "dragover_handler(event)");
+};
 
-$(".stock").click((ev) => {
-  if (stock.length == 0) {
-    stock = talon.reverse();
-    talon = [];
-    $(".talon > .card").remove()
-    $(".stock").removeClass("empty")
-    return
+const unmakeDropReceptor = (element) => {
+  element.removeAttr("ondrop").removeAttr("ondragover");
+};
+
+$(".pile, .foundation").each((i, e) => makeDropReceptor(e));
+
+const foundations = [];
+
+const findLastCardOnPile = (column) => {
+  const cards = $(`.pile[index=${column}] .card`);
+  if (cards.length == 0) {
+    return $(`.pile[index=${column}]`);
   }
-  if (stock.length == 1) {
-    $(".stock").addClass("empty")
-  } else {
-    $(".stock").removeClass("empty")
-  }
-  
-  const cardText = stock.pop();
-  talon.push(cardText);
-  const card = createCard(cardText, true);
-  $(".talon").append(card);
-});
-
-// in fact, we store here only the last card on each pile
-const piles = [];
-
-for (let i = 0; i <= 6; i++) {
-  piles[i] = $(`.tableau > .pile[index=${i}]`)
-    .attr("ondrop", "drop_handler(event)")
-    .attr("ondragover", "dragover_handler(event)");
-}
+  return $(cards[cards.length - 1]);
+};
 
 const addToPile = (column, cardText, shown) => {
-  card = createCard(cardText, shown);
-  piles[column].append(card);
-  piles[column] = card;
+  const lastCard = findLastCardOnPile(column);
+  unmakeDropReceptor(lastCard);
+  const card = createCard(cardText, shown, "pile");
+  makeDropReceptor(card);
+  lastCard.append(card);
 };
-console.log(piles);
 
 for (let line = 0; line <= 6; line++) {
   for (let column = line; column <= 6; column++) {
@@ -81,17 +122,23 @@ for (let line = 0; line <= 6; line++) {
   }
 }
 
-console.log(stock);
-
-const dragover_handler = (ev) => ev.preventDefault();
-
-const drop_handler = (ev) => {
-  ev.preventDefault();
-  const card = $("#beingdragged");
-  const cardParent = card.parent();
-  if (cardParent.hasClass("card") && !cardParent.hasClass("talon")) {
-    cardParent.removeClass("face-down").addClass("face-up").attr("draggable", true).on("dragstart", dragstart_handler);
+$(".stock").click((ev) => {
+  if (stock.length == 0) {
+    stock = talon.reverse();
+    talon = [];
+    $(".talon > .card").remove();
+    if (stock.length > 0) {
+      $(".stock").removeClass("empty");
+    }
+    return;
   }
-  card.removeAttr("id");
-  $(ev.target).append(card);
-};
+  if (stock.length == 1) {
+    $(".stock").addClass("empty");
+  } else {
+    $(".stock").removeClass("empty");
+  }
+
+  const cardText = stock.pop();
+  talon.push(cardText);
+  $(".talon").append(createCard(cardText, true, "talon"));
+});
