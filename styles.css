@@ -1,7 +1,7 @@
 :root {
   --card-width: 90px;
   --card-height: 150px;
-  --border-width: 1px;
+  --border-width: 2px;
   --card-margin: 5px;
   --bg-color: green;
 }
@@ -37,6 +37,9 @@ body {
 
 .card {
   text-align: right;
+  left: 0;
+  top: 0;
+  position: relative;
 }
 
 .talon .card,
@@ -55,14 +58,19 @@ body {
   margin-left: calc(var(--card-width) + 2 * var(--border-width) + 2 * var(--card-margin));
 }
 
-.foundation > span {
+.foundation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.foundation > p {
   display: none;
 }
 
-.foundation > span:last-child {
-  font-size: 100;
+.foundation > p:last-child {
   display: block;
-  padding-top: 15px;
+  font-size: 100;
 }
 
 .tableau {
@@ -82,15 +90,15 @@ body {
   margin: calc(-1 * var(--border-width));
 }
 
-.face-up {
+.card.revealed {
   background-color: white;
 }
 
-.face-down {
+.card:not(.revealed) {
   background-color: darkgreen;
 }
 
-.face-down > div.t {
+.card:not(.revealed) > div.t {
   text-indent: 100%;
   white-space: nowrap;
   overflow: hidden;

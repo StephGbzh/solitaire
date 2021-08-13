@@ -16,25 +16,30 @@ shuffleArray(stock);
 shuffleArray(stock);
 
 // https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API
-const dragstart_handler = (ev) => {
+const dragstartHandler = (ev) => {
   ev.originalEvent.target.setAttribute("id", "beingdragged");
   ev.originalEvent.dataTransfer.dropEffect = "move";
 };
 
-const dragover_handler = (ev) => ev.preventDefault();
+const dragoverHandler = (ev) => ev.preventDefault();
 
-const drop_handler = (ev) => {
+const dropHandler = (ev) => {
   ev.preventDefault();
   const evTarget = $(ev.target);
-  // forbid drop on itself
-  if (evTarget.attr("id") == "beingdragged") {
-    evTarget.removeAttr("id");
+  console.log(evTarget);
+  dropOn(evTarget);
+};
+
+const dropOn = (dropTarget) => {
+  // forbid dropping on itself
+  if (dropTarget.attr("id") == "beingdragged") {
+    dropTarget.removeAttr("id");
     return;
   }
   const droppedCard = $("#beingdragged");
   droppedCard.removeAttr("id");
   const from = droppedCard.attr("from");
-  const foundation = evTarget.closest(".foundation");
+  const foundation = dropTarget.closest(".foundation");
   if (from == "talon") {
     talon.pop();
     makeDropReceptor(droppedCard);
@@ -47,12 +52,14 @@ const drop_handler = (ev) => {
     const droppedCardOldParent = droppedCard.parent();
     makeDropReceptor(droppedCardOldParent);
     // reveal next card on old pile
-    if (droppedCardOldParent.hasClass("card") && droppedCardOldParent.hasClass("face-down")) {
+    if (droppedCardOldParent.hasClass("card") && !droppedCardOldParent.hasClass("revealed")) {
       droppedCardOldParent
-        .removeClass("face-down")
-        .addClass("face-up")
+        .addClass("revealed")
         .attr("draggable", true)
-        .on("dragstart", dragstart_handler);
+        .on("dragstart", dragstartHandler)
+        .on("touchstart", handleStart)
+        .on("touchend", handleEnd)
+        .on("touchmove", handleMove);
     }
   } else if (from == "foundation") {
     // nothing specific
@@ -63,7 +70,7 @@ const drop_handler = (ev) => {
     droppedCard.attr("from", "foundation");
     return;
   }
-  const pileOrPileCard = evTarget.closest(".card, .pile");
+  const pileOrPileCard = dropTarget.closest(".card, .pile");
   if (pileOrPileCard.length > 0) {
     unmakeDropReceptor(pileOrPileCard);
     pileOrPileCard.append(droppedCard);
@@ -79,16 +86,20 @@ const createCard = (text, shown, from) => {
     .append($("<div>").addClass("t").text(text));
 
   if (shown) {
-    card.addClass("face-up").attr("draggable", true).on("dragstart", dragstart_handler);
-  } else {
-    card.addClass("face-down");
+    card
+      .addClass("revealed")
+      .attr("draggable", true)
+      .on("dragstart", dragstartHandler)
+      .on("touchstart", handleStart)
+      .on("touchend", handleEnd)
+      .on("touchmove", handleMove);
   }
 
   return card;
 };
 
 const makeDropReceptor = (element) => {
-  $(element).attr("ondrop", "drop_handler(event)").attr("ondragover", "dragover_handler(event)");
+  $(element).attr("ondrop", "dropHandler(event)").attr("ondragover", "dragoverHandler(event)");
 };
 
 const unmakeDropReceptor = (element) => {
@@ -143,3 +154,63 @@ $(".stock").click((ev) => {
   talon.push(cardText);
   $(".talon").append(createCard(cardText, true, "talon"));
 });
+
+start = [0, 0];
+boxlefttop = [0, 0];
+
+function handleStart(ev) {
+  ev.preventDefault();
+  if (ev.originalEvent.target.nodeName == "DIV" && ev.originalEvent.target.className == "t") {
+    target = ev.originalEvent.target.parentNode;
+  } else {
+    target = ev.originalEvent.target;
+  }
+  console.log(target);
+  target.setAttribute("id", "beingdragged");
+  target.style.zIndex = 1;
+  start = [parseInt(ev.changedTouches[0].clientX), parseInt(ev.changedTouches[0].clientY)];
+  // console.log("touchstart", ev);
+}
+
+function handleEnd(ev) {
+  ev.preventDefault();
+  const targets = document
+    .elementsFromPoint(ev.changedTouches[0].clientX, ev.changedTouches[0].clientY)
+    .filter((e) => e.hasAttribute("ondrop") && e.getAttribute("id") != "beingdragged");
+  console.log("touchend", targets);
+  const dd = $("#beingdragged")
+  if (targets.length > 0) {
+    console.log("touchend", targets[0]);
+    dropOn($(targets[0]));
+  }
+  dd.css({
+    left: 0,
+    top: 0,
+    zIndex: 0,
+  });
+}
+
+function handleCancel(ev) {
+  ev.preventDefault();
+  console.log("touchcancel", ev);
+}
+
+function handleMove(ev) {
+  ev.preventDefault();
+  move = [parseInt(ev.changedTouches[0].clientX) - start[0], parseInt(ev.changedTouches[0].clientY) - start[1]];
+  start[0] += move[0];
+  start[1] += move[1];
+  if (ev.target.nodeName == "DIV" && ev.target.className == "t") {
+    target = ev.target.parentNode;
+  } else {
+    target = ev.target;
+  }
+  $(target).css({
+    left: function (index, value) {
+      return parseInt(value) + move[0];
+    },
+    top: function (index, value) {
+      return parseInt(value) + move[1];
+    },
+  });
+}
